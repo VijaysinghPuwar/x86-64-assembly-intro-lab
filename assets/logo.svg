@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="title">
+  <title id="title">x86-64 assembly and binary hardening lab</title>
+  <!-- shield -->
+  <path d="M64 6 L112 21 V60 C112 91 92 112 64 122 C36 112 16 91 16 60 V21 Z"
+        fill="#0f172a" stroke="#38bdf8" stroke-width="4" stroke-linejoin="round"/>
+  <!-- terminal prompt: > _ -->
+  <path d="M39 42 L53 52 L39 62" fill="none" stroke="#38bdf8" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="59" y="57" width="28" height="6" rx="2" fill="#e2e8f0"/>
+  <!-- architecture label -->
+  <text x="64" y="94" text-anchor="middle" fill="#e2e8f0"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="17" font-weight="700">x86-64</text>
+</svg>

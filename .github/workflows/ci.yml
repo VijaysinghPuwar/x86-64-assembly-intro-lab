@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    # Native x86-64: the runtime checks (stack permissions, ASLR, strace, gdb)
+    # only mean something on a real kernel, not under emulation.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      REQUIRE_ALL_TESTS: "1"   # tests that cannot run here fail instead of skipping
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            nasm bsdextrautils gdb strace shellcheck
+
+      - name: Tool versions
+        run: |
+          nasm --version
+          ld --version | head -n1
+          gcc --version | head -n1
+          python3 --version
+          uname -srm
+
+      - name: Lint shell scripts
+        run: shellcheck scripts/*.sh
+
+      - name: Build (parallel, warnings are errors)
+        run: make -j"$(nproc)"
+
+      - name: ELF hardening gate
+        run: make check-hardening
+
+      - name: Tests
+        run: make test
+
+      - name: Stress test
+        run: make stress
+
+      - name: Security demo
+        run: make security-demo
+
+      - name: Clean rebuilds are byte-identical
+        run: |
+          make clean
+          make -j"$(nproc)" BUILD=build-a
+          make -j"$(nproc)" BUILD=build-b
+          for f in hello star add asm-hexdump; do
+            cmp "build-a/$f" "build-b/$f"
+            sha256sum "build-a/$f"
+          done
+
+      - name: Build leaves no untracked files
+        run: |
+          status=$(git status --porcelain)
+          if [ -n "$status" ]; then echo "$status"; exit 1; fi

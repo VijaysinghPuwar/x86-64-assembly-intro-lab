@@ -1,0 +1,20 @@
+# Build output (make BUILD=... may create other build-* directories)
+/build/
+/build-*/
+
+# Python
+__pycache__/
+*.pyc
+
+# Debugging and crash artifacts
+core
+core.*
+vgcore.*
+.gdb_history
+*.strace
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
