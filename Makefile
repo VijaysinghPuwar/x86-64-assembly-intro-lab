@@ -29,7 +29,7 @@ comma := ,
 space := $() $()
 LIBC_PIE := -pie -Wl,$(subst $(space),$(comma),$(GUARDS)),-z,relro,-z,now
 
-PROGRAMS := $(addprefix $(BUILD)/,hello star add)
+PROGRAMS := $(addprefix $(BUILD)/,hello star add asm-hexdump)
 
 DEPS := include/linux.inc Makefile
 
@@ -49,6 +49,9 @@ IO := $(BUILD)/obj/io.o
 # ---- programs --------------------------------------------------------------
 
 $(BUILD)/hello $(BUILD)/star: $(BUILD)/%: $(BUILD)/obj/%.o $(IO)
+	$(LD) $(STATIC_PIE) $^ -o $@
+
+$(BUILD)/asm-hexdump: $(BUILD)/obj/hexdump.o $(IO)
 	$(LD) $(STATIC_PIE) $^ -o $@
 
 $(BUILD)/add: $(BUILD)/obj/add.o
