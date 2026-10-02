@@ -1,7 +1,9 @@
 # x86-64 Linux assembly + binary-hardening lab
 #
 #   make                  build the programs into build/
+#   make test             build everything and run the test suite
 #   make check-hardening  verify ELF security properties of the programs
+#   make stress           longer randomized comparison of asm-hexdump vs references
 #   make security-demo    build the deliberately insecure demos and compare them
 #   make clean
 
@@ -35,10 +37,11 @@ PROGRAMS := $(addprefix $(BUILD)/,hello star add asm-hexdump)
 
 DEMOS := $(addprefix $(BUILD)/security/,execstack-bad execstack-good \
            whereami-nopie whereami-pie)
+TEST_BINS := $(addprefix $(BUILD)/test/,add-probed misaligned-probed put-hex)
 
 DEPS := include/linux.inc Makefile
 
-.PHONY: all check-hardening security-demo clean
+.PHONY: all test check-hardening stress security-demo clean
 .DELETE_ON_ERROR:
 
 all: $(PROGRAMS)
@@ -60,6 +63,10 @@ $(BUILD)/obj/security/execstack-bad.o: security/execstack.asm $(DEPS)
 $(BUILD)/obj/security/whereami-abs.o: security/whereami.asm $(DEPS)
 	@mkdir -p $(@D)
 	$(NASM) $(NASMFLAGS) -DABSOLUTE $< -o $@
+
+$(BUILD)/obj/test/%.o: tests/%.asm $(DEPS)
+	@mkdir -p $(@D)
+	$(NASM) $(NASMFLAGS) $< -o $@
 
 IO := $(BUILD)/obj/io.o
 
@@ -100,11 +107,34 @@ $(BUILD)/security/whereami-abs-pie: $(BUILD)/obj/security/whereami-abs.o $(IO)
 	@mkdir -p $(@D)
 	$(LD) $(STATIC_PIE) $^ -o $@
 
+# ---- test helpers ----------------------------------------------------------
+
+# ABI probe: wrap libc calls to assert 16-byte stack alignment at each call.
+WRAP := -Wl,--wrap=printf,--wrap=fflush,--wrap=perror
+
+$(BUILD)/test/add-probed: $(BUILD)/obj/add.o $(BUILD)/obj/test/abi_probe.o
+	@mkdir -p $(@D)
+	$(CC) $(LIBC_PIE) $(WRAP) $^ -o $@
+
+$(BUILD)/test/misaligned-probed: $(BUILD)/obj/security/misaligned_call.o $(BUILD)/obj/test/abi_probe.o
+	@mkdir -p $(@D)
+	$(CC) $(LIBC_PIE) $(WRAP) $^ -o $@
+
+$(BUILD)/test/put-hex: $(BUILD)/obj/test/put_hex_check.o $(IO)
+	@mkdir -p $(@D)
+	$(LD) $(STATIC_PIE) $^ -o $@
+
 # ---- checks ----------------------------------------------------------------
 
 check-hardening: all
 	scripts/check-elf.sh static-pie $(BUILD)/hello $(BUILD)/star $(BUILD)/asm-hexdump
 	scripts/check-elf.sh dynamic-pie $(BUILD)/add
+
+test: all $(DEMOS) $(TEST_BINS)
+	BUILD=$(BUILD) $(PYTHON) -m unittest discover -s tests -v
+
+stress: $(BUILD)/asm-hexdump
+	BUILD=$(BUILD) $(PYTHON) tests/stress.py
 
 security-demo: $(DEMOS)
 	@scripts/security-demo.sh $(BUILD)
