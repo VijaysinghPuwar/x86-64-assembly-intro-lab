@@ -3,3 +3,7 @@
 *.inc linguist-language=Assembly
 *.pdf binary
 *.svg text
+
+# The Python test harness is tooling around the assembly, so leave it out of
+# GitHub's language statistics (the files stay visible as normal).
+tests/*.py linguist-detectable=false
