@@ -1,29 +1,34 @@
-; star.asm  - prints:
-; *
-; **
-; ***
+; star.asm - prints a three-line star pattern with a single write.
+;
+;   *
+;   **
+;   ***
 
-default rel                         ; RIP-relative addressing
+%include "linux.inc"
+default rel
 
-section .data
-    stars db "*",10                 ; "*\n"
-          db "**",10                ; "**\n"
-          db "***",10               ; "***\n"
-    stars_len equ $ - stars         ; total length = 1+1 + 2+1 + 3+1 = 9
+section .rodata
+stars:      db "*", 10
+            db "**", 10
+            db "***", 10
+stars_len   equ $ - stars           ; 9 bytes
 
 section .text
-    global  _start
+global _start
+extern write_all
 
-; ----- pure syscalls: no printf, no GCC hardening flags -----
 _start:
-    mov     rax, 1          ; sys_write
-    mov     rdi, 1          ;   fd = stdout
-    lea     rsi, [rel stars];   buffer
-    mov     rdx, stars_len  ;   length
+    mov     edi, STDOUT_FILENO
+    lea     rsi, [stars]
+    mov     edx, stars_len
+    call    write_all
+
+    mov     edi, EXIT_OK
+    test    rax, rax
+    jz      .exit
+    mov     edi, EXIT_FAILURE
+.exit:
+    mov     eax, SYS_exit
     syscall
 
-    mov     rax, 60         ; sys_exit
-    xor     rdi, rdi        ;   status = 0
-    syscall
-
-section .note.GNU-stack progbits alloc noexec
+NONEXEC_STACK
